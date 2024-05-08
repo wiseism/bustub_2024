@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "common/util/string_util.h"
+#include "fmt/format.h"
 
 namespace bustub {
 
@@ -27,12 +28,26 @@ auto StringUtil::Contains(const std::string &haystack, const std::string &needle
   return (haystack.find(needle) != std::string::npos);
 }
 
+auto StringUtil::ContainsAfter(const std::string &keyword, const std::string &haystack, const std::string &needle)
+    -> bool {
+  auto pos = haystack.find(keyword);
+  if (pos == std::string::npos) {
+    return false;
+  }
+  return (haystack.find(needle, pos) != std::string::npos);
+}
+
 void StringUtil::RTrim(std::string *str) {
   // remove trailing ' ', \f, \n, \r, \t, \v
   str->erase(std::find_if(str->rbegin(), str->rend(), [](int ch) { return std::isspace(ch) == 0; }).base(), str->end());
 }
 
-auto StringUtil::Indent(int num_indent) -> std::string { return std::string(num_indent, ' '); }
+void StringUtil::LTrim(std::string *str) {
+  // remove leading ' ', \f, \n, \r, \t, \v
+  str->erase(str->begin(), std::find_if(str->begin(), str->end(), [](int ch) { return std::isspace(ch) == 0; }));
+}
+
+auto StringUtil::Indent(int num_indent) -> std::string { return std::string(num_indent, ' '); }  // NOLINT
 
 auto StringUtil::StartsWith(const std::string &str, const std::string &prefix) -> bool {
   return std::equal(prefix.begin(), prefix.end(), str.begin());
@@ -165,7 +180,7 @@ std::string StringUtil::Format(std::string fmt_str, ...) {
       break;
     }
   }
-  return std::string(formatted.get());
+  return {formatted.get()};
 }
 
 auto StringUtil::Split(const std::string &input, const std::string &split) -> std::vector<std::string> {
@@ -190,11 +205,50 @@ auto StringUtil::Split(const std::string &input, const std::string &split) -> st
   return splits;
 }
 
+auto StringUtil::Count(const std::string &input, const std::string &str) -> size_t {
+  size_t count = 0;
+  size_t n_pos = input.find(str, 0);  // first occurrence
+  while (n_pos != std::string::npos) {
+    count++;
+    n_pos = input.find(str, n_pos + 1);
+  }
+  return count;
+}
+
 auto StringUtil::Strip(const std::string &str, char c) -> std::string {
   // There's a copy here which is wasteful, so don't use this in performance-critical code!
   std::string tmp = str;
   tmp.erase(std::remove(tmp.begin(), tmp.end(), c), tmp.end());
   return tmp;
+}
+
+auto StringUtil::Replace(std::string source, const std::string &from, const std::string &to) -> std::string {
+  uint64_t start_pos = 0;
+  while ((start_pos = source.find(from, start_pos)) != std::string::npos) {
+    source.replace(start_pos, from.length(), to);
+    start_pos += to.length();  // In case 'to' contains 'from', like
+                               // replacing 'x' with 'yx'
+  }
+  return source;
+}
+
+auto StringUtil::IndentAllLines(const std::string &lines, size_t num_indent, bool except_first_line) -> std::string {
+  std::vector<std::string> lines_str;
+  auto lines_split = StringUtil::Split(lines, '\n');
+  lines_str.reserve(lines_split.size());
+  auto indent_str = StringUtil::Indent(num_indent);
+  bool is_first_line = true;
+  for (auto &line : lines_split) {
+    if (is_first_line) {
+      is_first_line = false;
+      if (except_first_line) {
+        lines_str.push_back(line);
+        continue;
+      }
+    }
+    lines_str.push_back(fmt::format("{}{}", indent_str, line));
+  }
+  return fmt::format("{}", fmt::join(lines_str, "\n"));
 }
 
 }  // namespace bustub

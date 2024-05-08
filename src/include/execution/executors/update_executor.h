@@ -45,31 +45,25 @@ class UpdateExecutor : public AbstractExecutor {
   void Init() override;
 
   /**
-   * Yield the next tuple from the udpate.
+   * Yield the next tuple from the update.
    * @param[out] tuple The next tuple produced by the update
-   * @param[out] rid The next tuple RID produced by the update
+   * @param[out] rid The next tuple RID produced by the update (ignore this)
    * @return `true` if a tuple was produced, `false` if there are no more tuples
    *
-   * NOTE: UpdateExecutor::Next() does not use the `tuple` out-parameter.
    * NOTE: UpdateExecutor::Next() does not use the `rid` out-parameter.
    */
   auto Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool override;
 
   /** @return The output schema for the update */
-  auto GetOutputSchema() -> const Schema * override { return plan_->OutputSchema(); };
+  auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
  private:
-  /**
-   * Given a tuple, creates a new, updated tuple
-   * based on the `UpdateInfo` provided in the plan.
-   * @param src_tuple The tuple to be updated
-   */
-  auto GenerateUpdatedTuple(const Tuple &src_tuple) -> Tuple;
-
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;
+
   /** Metadata identifying the table that should be updated */
   const TableInfo *table_info_;
+
   /** The child executor to obtain value from */
   std::unique_ptr<AbstractExecutor> child_executor_;
 };

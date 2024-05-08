@@ -17,16 +17,25 @@
 #include "type/decimal_type.h"
 #include "type/integer_type.h"
 #include "type/smallint_type.h"
+#include "type/timestamp_type.h"
 #include "type/tinyint_type.h"
+#include "type/type_id.h"
 #include "type/value.h"
 #include "type/varlen_type.h"
+#include "type/vector_type.h"
 
 namespace bustub {
 
-Type *Type::k_types[] = {
-    new Type(TypeId::INVALID),        new BooleanType(), new TinyintType(), new SmallintType(),
-    new IntegerType(TypeId::INTEGER), new BigintType(),  new DecimalType(), new VarlenType(TypeId::VARCHAR),
-};
+Type *Type::k_types[] = {new Type(TypeId::INVALID),
+                         new BooleanType(),
+                         new TinyintType(),
+                         new SmallintType(),
+                         new IntegerType(TypeId::INTEGER),
+                         new BigintType(),
+                         new DecimalType(),
+                         new VarlenType(TypeId::VARCHAR),
+                         new TimestampType(),
+                         new VectorType()};
 
 // Get the size of this data type in bytes
 auto Type::GetTypeSize(const TypeId type_id) -> uint64_t {
@@ -115,6 +124,8 @@ auto Type::TypeIdToString(const TypeId type_id) -> std::string {
       return "TIMESTAMP";
     case VARCHAR:
       return "VARCHAR";
+    case VECTOR:
+      return "VECTOR";
     default:
       return "INVALID";
   }
@@ -123,21 +134,21 @@ auto Type::TypeIdToString(const TypeId type_id) -> std::string {
 auto Type::GetMinValue(TypeId type_id) -> Value {
   switch (type_id) {
     case BOOLEAN:
-      return Value(type_id, 0);
+      return {type_id, 0};
     case TINYINT:
-      return Value(type_id, BUSTUB_INT8_MIN);
+      return {type_id, BUSTUB_INT8_MIN};
     case SMALLINT:
-      return Value(type_id, BUSTUB_INT16_MIN);
+      return {type_id, BUSTUB_INT16_MIN};
     case INTEGER:
-      return Value(type_id, BUSTUB_INT32_MIN);
+      return {type_id, BUSTUB_INT32_MIN};
     case BIGINT:
-      return Value(type_id, BUSTUB_INT64_MIN);
+      return {type_id, BUSTUB_INT64_MIN};
     case DECIMAL:
-      return Value(type_id, BUSTUB_DECIMAL_MIN);
+      return {type_id, BUSTUB_DECIMAL_MIN};
     case TIMESTAMP:
-      return Value(type_id, 0);
+      return {type_id, 0};
     case VARCHAR:
-      return Value(type_id, "");
+      return {type_id, ""};
     default:
       break;
   }
@@ -147,21 +158,21 @@ auto Type::GetMinValue(TypeId type_id) -> Value {
 auto Type::GetMaxValue(TypeId type_id) -> Value {
   switch (type_id) {
     case BOOLEAN:
-      return Value(type_id, 1);
+      return {type_id, 1};
     case TINYINT:
-      return Value(type_id, BUSTUB_INT8_MAX);
+      return {type_id, BUSTUB_INT8_MAX};
     case SMALLINT:
-      return Value(type_id, BUSTUB_INT16_MAX);
+      return {type_id, BUSTUB_INT16_MAX};
     case INTEGER:
-      return Value(type_id, BUSTUB_INT32_MAX);
+      return {type_id, BUSTUB_INT32_MAX};
     case BIGINT:
-      return Value(type_id, BUSTUB_INT64_MAX);
+      return {type_id, BUSTUB_INT64_MAX};
     case DECIMAL:
-      return Value(type_id, BUSTUB_DECIMAL_MAX);
+      return {type_id, BUSTUB_DECIMAL_MAX};
     case TIMESTAMP:
-      return Value(type_id, BUSTUB_TIMESTAMP_MAX);
+      return {type_id, BUSTUB_TIMESTAMP_MAX};
     case VARCHAR:
-      return Value(type_id, nullptr, 0, false);
+      return {type_id, nullptr, 0, false};
     default:
       break;
   }
@@ -281,13 +292,8 @@ auto Type::GetData(const Value &val __attribute__((unused))) const -> const char
 }
 
 // Get the length of the variable length data
-auto Type::GetLength(const Value &val __attribute__((unused))) const -> uint32_t {
-  throw NotImplementedException("GetLength not implemented");
-}
-
-// Access the raw varlen data stored from the tuple storage
-auto Type::GetData(char *storage __attribute__((unused))) -> char * {
-  throw NotImplementedException("GetData not implemented");
+auto Type::GetStorageSize(const Value &val __attribute__((unused))) const -> uint32_t {
+  throw NotImplementedException("GetStorageSize not implemented");
 }
 
 }  // namespace bustub

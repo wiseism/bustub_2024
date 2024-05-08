@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -47,7 +48,11 @@ enum class ExceptionType {
   OUT_OF_MEMORY = 9,
   /** Method not implemented. */
   NOT_IMPLEMENTED = 11,
+  /** Execution exception. */
+  EXECUTION = 12,
 };
+
+extern std::atomic<bool> global_disable_execution_exception_print;
 
 class Exception : public std::runtime_error {
  public:
@@ -55,9 +60,14 @@ class Exception : public std::runtime_error {
    * Construct a new Exception instance.
    * @param message The exception message
    */
-  explicit Exception(const std::string &message) : std::runtime_error(message), type_(ExceptionType::INVALID) {
-    std::string exception_message = "Message :: " + message + "\n";
-    std::cerr << exception_message;
+  explicit Exception(const std::string &message, bool print = true)
+      : std::runtime_error(message), type_(ExceptionType::INVALID) {
+#ifndef NDEBUG
+    if (print) {
+      std::string exception_message = "Message :: " + message + "\n";
+      std::cerr << exception_message;
+    }
+#endif
   }
 
   /**
@@ -65,11 +75,15 @@ class Exception : public std::runtime_error {
    * @param exception_type The exception type
    * @param message The exception message
    */
-  Exception(ExceptionType exception_type, const std::string &message)
+  Exception(ExceptionType exception_type, const std::string &message, bool print = true)
       : std::runtime_error(message), type_(exception_type) {
-    std::string exception_message =
-        "\nException Type :: " + ExceptionTypeToString(type_) + "\nMessage :: " + message + "\n";
-    std::cerr << exception_message;
+#ifndef NDEBUG
+    if (print && !global_disable_execution_exception_print.load()) {
+      std::string exception_message =
+          "\nException Type :: " + ExceptionTypeToString(type_) + ", Message :: " + message + "\n\n";
+      std::cerr << exception_message;
+    }
+#endif
   }
 
   /** @return The type of the exception */
@@ -98,6 +112,8 @@ class Exception : public std::runtime_error {
         return "Out of Memory";
       case ExceptionType::NOT_IMPLEMENTED:
         return "Not implemented";
+      case ExceptionType::EXECUTION:
+        return "Execution";
       default:
         return "Unknown";
     }
@@ -111,6 +127,12 @@ class NotImplementedException : public Exception {
  public:
   NotImplementedException() = delete;
   explicit NotImplementedException(const std::string &msg) : Exception(ExceptionType::NOT_IMPLEMENTED, msg) {}
+};
+
+class ExecutionException : public Exception {
+ public:
+  ExecutionException() = delete;
+  explicit ExecutionException(const std::string &msg) : Exception(ExceptionType::EXECUTION, msg, true) {}
 };
 
 }  // namespace bustub

@@ -88,7 +88,7 @@ class HashUtil {
       }
       case TypeId::VARCHAR: {
         auto raw = val->GetData();
-        auto len = val->GetLength();
+        auto len = val->GetStorageSize();
         return HashBytes(raw, len);
       }
       case TypeId::TIMESTAMP: {
@@ -96,7 +96,7 @@ class HashUtil {
         return Hash<uint64_t>(&raw);
       }
       default: {
-        BUSTUB_ASSERT(false, "Unsupported type.");
+        UNIMPLEMENTED("Unsupported type.");
       }
     }
   }

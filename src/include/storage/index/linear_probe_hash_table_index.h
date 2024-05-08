@@ -17,8 +17,8 @@
 #include <string>
 #include <vector>
 
+#include "container/disk/hash/linear_probe_hash_table.h"
 #include "container/hash/hash_function.h"
-#include "container/hash/linear_probe_hash_table.h"
 #include "storage/index/index.h"
 
 namespace bustub {
@@ -33,7 +33,7 @@ class LinearProbeHashTableIndex : public Index {
 
   ~LinearProbeHashTableIndex() override = default;
 
-  void InsertEntry(const Tuple &key, RID rid, Transaction *transaction) override;
+  auto InsertEntry(const Tuple &key, RID rid, Transaction *transaction) -> bool override;
 
   void DeleteEntry(const Tuple &key, RID rid, Transaction *transaction) override;
 

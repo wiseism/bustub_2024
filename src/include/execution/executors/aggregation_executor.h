@@ -38,30 +38,25 @@ class SimpleAggregationHashTable {
    * @param agg_exprs the aggregation expressions
    * @param agg_types the types of aggregations
    */
-  SimpleAggregationHashTable(const std::vector<const AbstractExpression *> &agg_exprs,
+  SimpleAggregationHashTable(const std::vector<AbstractExpressionRef> &agg_exprs,
                              const std::vector<AggregationType> &agg_types)
       : agg_exprs_{agg_exprs}, agg_types_{agg_types} {}
 
-  /** @return The initial aggregrate value for this aggregation executor */
+  /** @return The initial aggregate value for this aggregation executor */
   auto GenerateInitialAggregateValue() -> AggregateValue {
     std::vector<Value> values{};
     for (const auto &agg_type : agg_types_) {
       switch (agg_type) {
+        case AggregationType::CountStarAggregate:
+          // Count start starts at zero.
+          values.emplace_back(ValueFactory::GetIntegerValue(0));
+          break;
         case AggregationType::CountAggregate:
-          // Count starts at zero.
-          values.emplace_back(ValueFactory::GetIntegerValue(0));
-          break;
         case AggregationType::SumAggregate:
-          // Sum starts at zero.
-          values.emplace_back(ValueFactory::GetIntegerValue(0));
-          break;
         case AggregationType::MinAggregate:
-          // Min starts at INT_MAX.
-          values.emplace_back(ValueFactory::GetIntegerValue(BUSTUB_INT32_MAX));
-          break;
         case AggregationType::MaxAggregate:
-          // Max starts at INT_MIN.
-          values.emplace_back(ValueFactory::GetIntegerValue(BUSTUB_INT32_MIN));
+          // Others starts at null.
+          values.emplace_back(ValueFactory::GetNullValueByType(TypeId::INTEGER));
           break;
       }
     }
@@ -69,6 +64,8 @@ class SimpleAggregationHashTable {
   }
 
   /**
+   * TODO(Student)
+   *
    * Combines the input into the aggregation result.
    * @param[out] result The output aggregate value
    * @param input The input value
@@ -76,21 +73,11 @@ class SimpleAggregationHashTable {
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
       switch (agg_types_[i]) {
+        case AggregationType::CountStarAggregate:
         case AggregationType::CountAggregate:
-          // Count increases by one.
-          result->aggregates_[i] = result->aggregates_[i].Add(ValueFactory::GetIntegerValue(1));
-          break;
         case AggregationType::SumAggregate:
-          // Sum increases by addition.
-          result->aggregates_[i] = result->aggregates_[i].Add(input.aggregates_[i]);
-          break;
         case AggregationType::MinAggregate:
-          // Min is just the min.
-          result->aggregates_[i] = result->aggregates_[i].Min(input.aggregates_[i]);
-          break;
         case AggregationType::MaxAggregate:
-          // Max is just the max.
-          result->aggregates_[i] = result->aggregates_[i].Max(input.aggregates_[i]);
           break;
       }
     }
@@ -107,6 +94,11 @@ class SimpleAggregationHashTable {
     }
     CombineAggregateValues(&ht_[agg_key], agg_val);
   }
+
+  /**
+   * Clear the hash table
+   */
+  void Clear() { ht_.clear(); }
 
   /** An iterator over the aggregation hash table */
   class Iterator {
@@ -147,7 +139,7 @@ class SimpleAggregationHashTable {
   /** The hash table is just a map from aggregate keys to aggregate values */
   std::unordered_map<AggregateKey, AggregateValue> ht_{};
   /** The aggregate expressions that we have */
-  const std::vector<const AbstractExpression *> &agg_exprs_;
+  const std::vector<AbstractExpressionRef> &agg_exprs_;
   /** The types of aggregations that we have */
   const std::vector<AggregationType> &agg_types_;
 };
@@ -165,21 +157,21 @@ class AggregationExecutor : public AbstractExecutor {
    * @param child_executor The child executor from which inserted tuples are pulled (may be `nullptr`)
    */
   AggregationExecutor(ExecutorContext *exec_ctx, const AggregationPlanNode *plan,
-                      std::unique_ptr<AbstractExecutor> &&child);
+                      std::unique_ptr<AbstractExecutor> &&child_executor);
 
   /** Initialize the aggregation */
   void Init() override;
 
   /**
    * Yield the next tuple from the insert.
-   * @param[out] tuple The next tuple produced by the insert
-   * @param[out] rid The next tuple RID produced by the insert
+   * @param[out] tuple The next tuple produced by the aggregation
+   * @param[out] rid The next tuple RID produced by the aggregation
    * @return `true` if a tuple was produced, `false` if there are no more tuples
    */
   auto Next(Tuple *tuple, RID *rid) -> bool override;
 
   /** @return The output schema for the aggregation */
-  auto GetOutputSchema() -> const Schema * override { return plan_->OutputSchema(); };
+  auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
 
   /** Do not use or remove this function, otherwise you will get zero points. */
   auto GetChildExecutor() const -> const AbstractExecutor *;
@@ -189,7 +181,7 @@ class AggregationExecutor : public AbstractExecutor {
   auto MakeAggregateKey(const Tuple *tuple) -> AggregateKey {
     std::vector<Value> keys;
     for (const auto &expr : plan_->GetGroupBys()) {
-      keys.emplace_back(expr->Evaluate(tuple, child_->GetOutputSchema()));
+      keys.emplace_back(expr->Evaluate(tuple, child_executor_->GetOutputSchema()));
     }
     return {keys};
   }
@@ -198,7 +190,7 @@ class AggregationExecutor : public AbstractExecutor {
   auto MakeAggregateValue(const Tuple *tuple) -> AggregateValue {
     std::vector<Value> vals;
     for (const auto &expr : plan_->GetAggregates()) {
-      vals.emplace_back(expr->Evaluate(tuple, child_->GetOutputSchema()));
+      vals.emplace_back(expr->Evaluate(tuple, child_executor_->GetOutputSchema()));
     }
     return {vals};
   }
@@ -206,10 +198,13 @@ class AggregationExecutor : public AbstractExecutor {
  private:
   /** The aggregation plan node */
   const AggregationPlanNode *plan_;
+
   /** The child executor that produces tuples over which the aggregation is computed */
-  std::unique_ptr<AbstractExecutor> child_;
+  std::unique_ptr<AbstractExecutor> child_executor_;
+
   /** Simple aggregation hash table */
   // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
+
   /** Simple aggregation hash table iterator */
   // TODO(Student): Uncomment SimpleAggregationHashTable::Iterator aht_iterator_;
 };
