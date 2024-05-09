@@ -59,7 +59,22 @@ class ORSet {
   auto ToString() const -> std::string;
 
  private:
+  struct orset_node_t
+  {
+    T element_;
+    uid_t uid_;
+
+    bool operator==(const orset_node_t &other) const
+    {
+      return element_ == other.element_ && uid_ == other.uid_;
+    }
+  };
+
+
+  
   // TODO(student): Add your private memeber variables to represent ORSet.
+  std::vector<orset_node_t> elements_;
+  std::vector<orset_node_t> removed_;
 };
 
 }  // namespace bustub

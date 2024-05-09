@@ -1,25 +1,5 @@
 {
-    "python.autoComplete.extraPaths": [
-        "/home/lepsa/new/Engineer2024/install/example_ros2_interfaces/local/lib/python3.10/dist-packages",
-        "/home/lepsa/new/Engineer2024/install/engineer_interfaces/local/lib/python3.10/dist-packages",
-        "/home/lepsa/new/Engineer2024/install/action_server2/lib/python3.10/site-packages",
-        "/opt/ros/humble/lib/python3.10/site-packages",
-        "/opt/ros/humble/local/lib/python3.10/dist-packages",
-        "/opt/intel/openvino/python/python3.10",
-        "/opt/intel/openvino/python/python3",
-        ""
-    ],
-    "python.analysis.extraPaths": [
-        "/home/lepsa/new/Engineer2024/install/example_ros2_interfaces/local/lib/python3.10/dist-packages",
-        "/home/lepsa/new/Engineer2024/install/engineer_interfaces/local/lib/python3.10/dist-packages",
-        "/home/lepsa/new/Engineer2024/install/action_server2/lib/python3.10/site-packages",
-        "/opt/ros/humble/lib/python3.10/site-packages",
-        "/opt/ros/humble/local/lib/python3.10/dist-packages",
-        "/opt/intel/openvino/python/python3.10",
-        "/opt/intel/openvino/python/python3",
-        ""
-    ],
     "files.associations": {
-        "memory": "cpp"
+        "*.tcc": "cpp"
     }
 }
