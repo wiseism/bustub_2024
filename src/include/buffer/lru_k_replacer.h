@@ -26,14 +26,61 @@ namespace bustub {
 enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
+ public:
+
+  LRUKNode(frame_id_t frame_id){
+    k_ = 1;
+    fid_ = frame_id;
+  }
+
+  LRUKNode() = default;
+
+ bool operator<(const LRUKNode &other) const {
+    if(is_evictable_ == false && other.is_evictable_ == true)
+      return true;
+    else if(is_evictable_ == true && other.is_evictable_ == false)
+      return false;
+    std::list<size_t>::const_iterator it = history_.begin();
+    std::list<size_t>::const_iterator it2 = other.history_.begin();
+    while (it != history_.end() && it2 != other.history_.end()) {
+      if (*it != *it2) {
+        return *it < *it2;
+      }else {
+        it++;
+        it2++;
+      }
+    }
+    if (it == history_.end() && it2 != other.history_.end()) {
+      return true;
+    } else if (it != history_.end() && it2 == other.history_.end()) {
+      return false;
+    } else {
+      return false;
+    }
+  }
+
+  auto set_evictable(bool is_evictable) -> void { is_evictable_ = is_evictable; }
+
+  auto add_to_history(size_t timestamp) -> void { history_.push_front(timestamp); }
+
+  auto get_frame_id() -> frame_id_t { return fid_; }
+
+  auto is_evictable() -> bool { return is_evictable_; }
+
+  auto get_history() -> std::list<size_t> { return history_; }
+ 
+  auto set_k(size_t k) -> void { k_ = k; }
+
+  auto get_k() -> size_t { return k_; }
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
-  [[maybe_unused]] std::list<size_t> history_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] frame_id_t fid_;
-  [[maybe_unused]] bool is_evictable_{false};
+  bool is_evictable_{false};
+  std::list<size_t> history_;
+  size_t k_;
+  frame_id_t fid_;
+
 };
 
 /**
@@ -148,14 +195,16 @@ class LRUKReplacer {
   auto Size() -> size_t;
 
  private:
+  const size_t inf = 2<<15;
+
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
+  std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  size_t current_timestamp_{1000};
   [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  size_t replacer_size_;
+  size_t k_;
+  std::mutex latch_;
 };
 
 }  // namespace bustub
