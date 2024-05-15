@@ -40,7 +40,10 @@ void DiskScheduler::StartWorkerThread() {
     if(!req.has_value())
       break;
     if(req->is_write_)
-      disk_manager_->WritePage(req->page_id_, req->data_);
+    {
+      if(req->page_id_ >= 0)
+        disk_manager_->WritePage(req->page_id_, req->data_);
+    }
     else
       disk_manager_->ReadPage(req->page_id_, req->data_);
 
