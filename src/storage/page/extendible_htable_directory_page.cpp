@@ -24,6 +24,7 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
   max_depth_ = max_depth;
   global_depth_ = 0;
   memset(local_depths_, 0, sizeof(local_depths_));
+  memset(bucket_page_ids_, INVALID_PAGE_ID, sizeof(bucket_page_ids_));
 }
 
 auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t { 
@@ -48,11 +49,11 @@ void ExtendibleHTableDirectoryPage::IncrGlobalDepth() {
     SetBucketPageId(idx + Size(), GetBucketPageId(idx));
     SetLocalDepth(idx + Size(), GetLocalDepth(idx));
   }
-  global_depth_++;
+  global_depth_ = global_depth_ + 1;
 }
 
 void ExtendibleHTableDirectoryPage::DecrGlobalDepth() {
-  global_depth_--;
+  global_depth_ = global_depth_ - 1;
 }
 
 auto ExtendibleHTableDirectoryPage::CanShrink() -> bool {
@@ -83,6 +84,13 @@ void ExtendibleHTableDirectoryPage::SetLocalDepth(uint32_t bucket_idx, uint8_t l
 
 void ExtendibleHTableDirectoryPage::IncrLocalDepth(uint32_t bucket_idx) {
   local_depths_[bucket_idx]++;
+  if(local_depths_[bucket_idx] <= global_depth_)
+  {
+    if(bucket_idx + Size()/2 < Size() && local_depths_[bucket_idx + Size()/2] < local_depths_[bucket_idx])
+      local_depths_[bucket_idx + Size()/2]++;
+    else if(bucket_idx - Size()/2 >= 0 && local_depths_[bucket_idx - Size()/2] < local_depths_[bucket_idx])
+      local_depths_[bucket_idx - Size()/2]++;
+  }
 }
 
 void ExtendibleHTableDirectoryPage::DecrLocalDepth(uint32_t bucket_idx) {

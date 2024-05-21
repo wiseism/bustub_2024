@@ -191,7 +191,7 @@ class ExtendibleHTableDirectoryPage {
 
  private:
   uint32_t max_depth_;
-  uint32_t global_depth_;
+  uint32_t global_depth_ = 0;
   uint8_t local_depths_[HTABLE_DIRECTORY_ARRAY_SIZE];
   page_id_t bucket_page_ids_[HTABLE_DIRECTORY_ARRAY_SIZE];
 };

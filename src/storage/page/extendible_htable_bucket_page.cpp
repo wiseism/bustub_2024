@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstddef>
 #include <optional>
 #include <utility>
 
@@ -20,7 +21,6 @@ namespace bustub {
 
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size) {
-  empty_value_ = array_[0].first;
   max_size_ = max_size;
   size_ = 0;
 }
@@ -48,7 +48,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
   }
 
   for(const auto &pair : array_) {
-    if(cmp(pair.first, empty_value_) == 0) {
+    if(cmp(pair.first, array_[max_size_ + 1].first) == 0) {
       array_[&pair - array_] = std::make_pair(key, value);
       break;
     }
@@ -72,7 +72,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -
 
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
-  array_[bucket_idx] = std::make_pair(K(), V());
+  array_[bucket_idx] = std::make_pair(array_[max_size_ + 1].first, array_[max_size_ + 1].second);
 }
 
 template <typename K, typename V, typename KC>
@@ -87,7 +87,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::ValueAt(uint32_t bucket_idx) const ->
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::EntryAt(uint32_t bucket_idx) const -> const std::pair<K, V> & {
-  return array_[0];
+  return array_[bucket_idx];
 }
 
 template <typename K, typename V, typename KC>

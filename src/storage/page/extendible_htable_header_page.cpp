@@ -13,15 +13,22 @@
 #include "storage/page/extendible_htable_header_page.h"
 
 #include "common/exception.h"
+#include <cstddef>
 
 namespace bustub {
 
 void ExtendibleHTableHeaderPage::Init(uint32_t max_depth) {
   max_depth_ = max_depth;
+  for(size_t i = 0; i < HTABLE_HEADER_ARRAY_SIZE; i++)
+  {
+    directory_page_ids_[i] = INVALID_PAGE_ID;
+  }
 }
 
 auto ExtendibleHTableHeaderPage::HashToDirectoryIndex(uint32_t hash) const -> uint32_t {
-   return (hash >> (sizeof(uint32_t) * 8 - max_depth_)); }
+   if(max_depth_ == 0) return 0;
+   return (hash >> (sizeof(uint32_t) * 8 - max_depth_)); 
+}
 
 auto ExtendibleHTableHeaderPage::GetDirectoryPageId(uint32_t directory_idx) const -> uint32_t { 
   return directory_page_ids_[directory_idx]; 
