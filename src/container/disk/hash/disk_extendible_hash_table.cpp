@@ -46,10 +46,10 @@ DiskExtendibleHashTable<K, V, KC>::DiskExtendibleHashTable(const std::string &na
       header_max_depth_(header_max_depth),
       directory_max_depth_(directory_max_depth),
       bucket_max_size_(bucket_max_size) {
-        BasicPageGuard header_guard = bpm_->NewPageGuarded(&header_page_id_);
+        WritePageGuard header_guard = bpm_->NewPageGuarded(&header_page_id_).UpgradeWrite();
         auto header_page = header_guard.AsMut<ExtendibleHTableHeaderPage>();
         header_page->Init(header_max_depth_);
-        bpm_->FlushAllPages();
+        bpm_->FlushPage(header_page_id_);
         header_guard.Drop();
 }
 
@@ -61,14 +61,14 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
     -> bool {
       bool found = false;
 
-      BasicPageGuard header_guard = bpm_->FetchPageBasic(header_page_id_);
+      ReadPageGuard header_guard = bpm_->FetchPageRead(header_page_id_);
       auto *header = header_guard.As<ExtendibleHTableHeaderPage>();
 
-      BasicPageGuard directory_guard = bpm_->FetchPageBasic(header->GetDirectoryPageId(header->HashToDirectoryIndex(hash_fn_.GetHash(key))));
+      ReadPageGuard directory_guard = bpm_->FetchPageRead(header->GetDirectoryPageId(header->HashToDirectoryIndex(hash_fn_.GetHash(key))));
       auto *directory = directory_guard.As<ExtendibleHTableDirectoryPage>();
       uint32_t bucket_page_id = directory->GetBucketPageId( directory->HashToBucketIndex(Hash(key)));
 
-      BasicPageGuard bucket_guard = bpm_->FetchPageBasic(bucket_page_id);
+      ReadPageGuard bucket_guard = bpm_->FetchPageRead(bucket_page_id);
       auto *bucket = bucket_guard.As<ExtendibleHTableBucketPage<K, V, KC>>();
       
       if(result->empty())
@@ -76,7 +76,6 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
       found = bucket->Lookup(key, result->front(), cmp_);
       if(!found)result->clear();
       
-      bpm_->FlushAllPages();
       bucket_guard.Drop();
       directory_guard.Drop();
       header_guard.Drop();
@@ -103,9 +102,9 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
 
   if(directory_page_id == INVALID_PAGE_ID)
   {
+    header_guard.UpgradeWrite();
     inserted = InsertToNewDirectory(header, directory_idx, hash, key, value);
-    bpm_->FlushAllPages();
-    header_guard.Drop();
+    bpm_->FlushPage(header_page_id_);
     return inserted;
   }  
 
@@ -163,7 +162,7 @@ template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::InsertToNewDirectory(ExtendibleHTableHeaderPage *header, uint32_t directory_idx,
                                                             uint32_t hash, const K &key, const V &value) -> bool {
   page_id_t temp_directory_page_id = INVALID_PAGE_ID;
-  BasicPageGuard directory_guard = bpm_->NewPageGuarded(&temp_directory_page_id);
+  WritePageGuard directory_guard = bpm_->NewPageGuarded(&temp_directory_page_id).UpgradeWrite();
   if(temp_directory_page_id == INVALID_PAGE_ID)
     return false;
 
@@ -174,6 +173,7 @@ auto DiskExtendibleHashTable<K, V, KC>::InsertToNewDirectory(ExtendibleHTableHea
   uint32_t bucket_idx = directory->HashToBucketIndex(Hash(key));
   bool inserted = InsertToNewBucket(directory, bucket_idx, key, value);
   
+  bpm_->FlushPage(temp_directory_page_id);
   directory_guard.Drop();
 
   return inserted;

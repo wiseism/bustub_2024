@@ -38,7 +38,6 @@ auto BasicPageGuard::UpgradeRead() -> ReadPageGuard {
 
 auto BasicPageGuard::UpgradeWrite() -> WritePageGuard { 
     if(bpm_ == nullptr || page_ == nullptr) return {nullptr, nullptr};
-    page_->WLatch();
     WritePageGuard guard(bpm_, page_);
     Drop();
     return guard;  
@@ -46,14 +45,12 @@ auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
 
 ReadPageGuard::ReadPageGuard(BufferPoolManager *bpm, Page *page) {
     guard_ = BasicPageGuard(bpm, page);
-    page->RLatch();
+    guard_.page_->RLatch();
 }
 
 ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept
 {
     guard_ = std::move(that.guard_);
-    that.Drop();
-    guard_.page_->RLatch();; 
 };
 
 auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & { 
@@ -69,17 +66,18 @@ void ReadPageGuard::Drop() {
     guard_.Drop();
 }
 
-ReadPageGuard::~ReadPageGuard() {Drop();}  // NOLINT
+ReadPageGuard::~ReadPageGuard() {
+    if(guard_.page_ == nullptr) return;
+    Drop();
+}  // NOLINT
 
 WritePageGuard::WritePageGuard(BufferPoolManager *bpm, Page *page) {
     guard_ = BasicPageGuard(bpm, page);
-    page->WLatch();
+    guard_.page_->WLatch();
 }
 
 WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept{
     guard_ = std::move(that.guard_);
-    that.Drop();
-    guard_.page_->WLatch();
 };
 
 auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard & {
@@ -91,10 +89,13 @@ auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard
 }
 
 void WritePageGuard::Drop() {
-    guard_.page_->WUnlatch();
+     guard_.page_->WUnlatch();
     guard_.Drop();
 }
 
-WritePageGuard::~WritePageGuard() {Drop();}  // NOLINT
+WritePageGuard::~WritePageGuard() {
+    if(guard_.page_ == nullptr) return;
+    Drop();
+}  // NOLINT
 
 }  // namespace bustub

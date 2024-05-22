@@ -53,9 +53,19 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   }
   frame_id = free_list_.front();
   free_list_.pop_front();
-  latch_.unlock();
-  FlushPage(pages_[frame_id].GetPageId());
-  latch_.lock();
+
+//  FlushPage(pages_[frame_id].GetPageId());
+  for(size_t i = 0; i < pool_size_; i++)
+  {
+    if(pages_[i].page_id_ == pages_[frame_id].GetPageId())
+    {
+      auto promise = disk_scheduler_->CreatePromise();
+      auto future = promise.get_future();
+      disk_scheduler_->Schedule({true, pages_[i].GetData(), pages_[i].page_id_, std::move(promise)});
+      future.get();
+      pages_[i].is_dirty_ = false;
+    }
+  }   
 
   pages_[frame_id].page_id_ = AllocatePage();
   pages_[frame_id].is_dirty_ = false;
